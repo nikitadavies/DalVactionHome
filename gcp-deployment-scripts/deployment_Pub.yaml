@@ -1,0 +1,78 @@
+resources:
+  - name: test-pubsub-topic
+    type: gcp-types/pubsub-v1:projects.topics
+    properties:
+      topic: test-topic
+
+  # Uncomment and modify if you need to enable Firestore API
+  # - name: enable-firestore-api
+  #   type: gcp-types/servicemanagement-v1:services
+  #   properties:
+  #     consumerId: project:csci5410-pro
+  #     serviceName: firestore.googleapis.com
+# resources:
+  # - name: my-pubsub-topic
+  #   type: pubsub.v1.topic
+  #   properties:
+  #     topic: my-topic
+
+
+  # - name: checkTicketResolution1
+  #   type: gcp-types/cloudfunctions-v1:projects.locations.functions
+  #   properties:
+  #     parent: projects/csci5410-pro/locations/us-east1
+  #     function: checkTicketResolution1
+  #     sourceArchiveUrl: gs://cloudfunctionzipfiles/checkTicketResolution1.zip
+  #     entryPoint: main
+  #     httpsTrigger: {}  # Use httpsTrigger for HTTP-triggered functions
+  #     runtime: nodejs18
+
+  # - name: fetchQuestionAndAnswer1
+  #   type: gcp-types/cloudfunctions-v1:projects.locations.functions
+  #   properties:
+  #     parent: projects/csci5410-pro/locations/us-east1
+  #     function: fetchQuestionAndAnswer1
+  #     sourceArchiveUrl: gs://cloudfunctionzipfiles/fetchQuestionAndAnswer1.zip
+  #     entryPoint: main
+  #     httpsTrigger: {}  # Use httpsTrigger for HTTP-triggered functions
+  #     runtime: nodejs18
+
+  # - name: fetchQuestionForAgent1
+  #   type: gcp-types/cloudfunctions-v1:projects.locations.functions
+  #   properties:
+  #     parent: projects/csci5410-pro/locations/us-east1
+  #     function: fetchQuestionForAgent1
+  #     sourceArchiveUrl: gs://cloudfunctionzipfiles/fetchQuestionForAgent1.zip
+  #     entryPoint: main
+  #     httpsTrigger: {}  # Use httpsTrigger for HTTP-triggered functions
+  #     runtime: nodejs18
+
+  # - name: processQuestion1
+  #   type: gcp-types/cloudfunctions-v1:projects.locations.functions
+  #   properties:
+  #     parent: projects/csci5410-pro/locations/us-east1
+  #     function: processQuestion1
+  #     sourceArchiveUrl: gs://cloudfunctionzipfiles/processQuestion1.zip
+  #     entryPoint: main
+  #     httpsTrigger: {}  # Use httpsTrigger for HTTP-triggered functions
+  #     runtime: nodejs18
+
+  # - name: publishQuestion1
+  #   type: gcp-types/cloudfunctions-v1:projects.locations.functions
+  #   properties:
+  #     parent: projects/csci5410-pro/locations/us-east1
+  #     function: publishQuestion1
+  #     sourceArchiveUrl: gs://cloudfunctionzipfiles/publishQuestion1.zip
+  #     entryPoint: main
+  #     httpsTrigger: {}  # Use httpsTrigger for HTTP-triggered functions
+  #     runtime: nodejs18
+
+  # - name: updateAnswerForQuestion1
+  #   type: gcp-types/cloudfunctions-v1:projects.locations.functions
+  #   properties:
+  #     parent: projects/csci5410-pro/locations/us-east1
+  #     function: updateAnswerForQuestion1
+  #     sourceArchiveUrl: gs://cloudfunctionzipfiles/updateAnswerForQuestion1.zip
+  #     entryPoint: main
+  #     httpsTrigger: {}  # Use httpsTrigger for HTTP-triggered functions
+  #     runtime: nodejs18

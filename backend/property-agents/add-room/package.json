@@ -1,0 +1,15 @@
+{
+  "name": "add-room",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Rameez Parkar",
+  "license": "ISC",
+  "dependencies": {
+    "aws-sdk": "^2.1637.0",
+    "uuid": "^10.0.0"
+  }
+}

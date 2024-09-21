@@ -1,0 +1,192 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: AWS CloudFormation template to create a User Management API with SNS, SQS, and Lambda integrations.
+
+Resources:
+  LoginUserFunction:
+    Type: "AWS::Lambda::Function"
+    Properties:
+      FunctionName: LoginUserFunction
+      Handler: index.handler
+      Role: arn:aws:iam::492729822429:role/LabRole
+      Runtime: nodejs20.x
+      Code:
+        S3Bucket: lambda-bucket-mfa
+        S3Key: login-user.zip
+
+  RegisterUserFunction:
+    Type: "AWS::Lambda::Function"
+    Properties:
+      FunctionName: RegisterUserFunction
+      Handler: index.handler
+      Role: arn:aws:iam::492729822429:role/LabRole
+      Runtime: nodejs20.x
+      Code:
+        S3Bucket: lambda-bucket-mfa
+        S3Key: register-user.zip
+
+  ProcessLoginFunction:
+    Type: "AWS::Lambda::Function"
+    Properties:
+      FunctionName: ProcessLoginFunction
+      Handler: index.handler
+      Role: arn:aws:iam::492729822429:role/LabRole
+      Runtime: nodejs20.x
+      Code:
+        S3Bucket: lambda-bucket-mfa
+        S3Key: process-login.zip
+
+  ProcessQueueFunction:
+    Type: "AWS::Lambda::Function"
+    Properties:
+      FunctionName: ProcessQueueFunction
+      Handler: index.handler
+      Role: arn:aws:iam::492729822429:role/LabRole
+      Runtime: nodejs20.x
+      Code:
+        S3Bucket: lambda-bucket-mfa
+        S3Key: process-queue.zip
+
+  LoginTopic:
+    Type: "AWS::SNS::Topic"
+    Properties:
+      TopicName: LoginTopic
+
+  UserCreatedTopic:
+    Type: "AWS::SNS::Topic"
+    Properties:
+      TopicName: UserCreatedTopic
+
+  LoginQueue:
+    Type: "AWS::SQS::Queue"
+    Properties:
+      QueueName: LoginQueue
+
+  UserCreationQueue:
+    Type: "AWS::SQS::Queue"
+    Properties:
+      QueueName: UserCreationQueue
+
+  LoginQueueSubscription:
+    Type: "AWS::SNS::Subscription"
+    Properties:
+      Endpoint: !GetAtt LoginQueue.Arn
+      Protocol: sqs
+      TopicArn: !Ref LoginTopic
+
+  UserCreationQueueSubscription:
+    Type: "AWS::SNS::Subscription"
+    Properties:
+      Endpoint: !GetAtt UserCreationQueue.Arn
+      Protocol: sqs
+      TopicArn: !Ref UserCreatedTopic
+
+  ApiGateway:
+    Type: "AWS::ApiGateway::RestApi"
+    Properties:
+      Name: UserManagementApi
+
+  NotifyLogin:
+    Type: "AWS::ApiGateway::Resource"
+    Properties:
+      ParentId: !GetAtt ApiGateway.RootResourceId
+      PathPart: login
+      RestApiId: !Ref ApiGateway
+
+  NotifyUser:
+    Type: "AWS::ApiGateway::Resource"
+    Properties:
+      ParentId: !GetAtt ApiGateway.RootResourceId
+      PathPart: new
+      RestApiId: !Ref ApiGateway
+
+  NotifyLoginMethod:
+    Type: "AWS::ApiGateway::Method"
+    Properties:
+      AuthorizationType: NONE
+      HttpMethod: POST
+      ResourceId: !Ref NotifyLogin
+      RestApiId: !Ref ApiGateway
+      Integration:
+        Type: AWS
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LoginUserFunction.Arn}/invocations
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+              method.response.header.Access-Control-Allow-Methods: "'POST,OPTIONS'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Origin: true
+
+  NotifyUserMethod:
+    Type: "AWS::ApiGateway::Method"
+    Properties:
+      AuthorizationType: NONE
+      HttpMethod: POST
+      ResourceId: !Ref NotifyUser
+      RestApiId: !Ref ApiGateway
+      Integration:
+        Type: AWS
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${RegisterUserFunction.Arn}/invocations
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+              method.response.header.Access-Control-Allow-Methods: "'POST,OPTIONS'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Origin: true
+
+  NotifyLoginLambdaInvokePermission:
+    Type: "AWS::Lambda::Permission"
+    Properties:
+      Action: "lambda:InvokeFunction"
+      FunctionName: !Ref LoginUserFunction
+      Principal: "apigateway.amazonaws.com"
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGateway}/*/POST/login
+
+  NotifyUserLambdaInvokePermission:
+    Type: "AWS::Lambda::Permission"
+    Properties:
+      Action: "lambda:InvokeFunction"
+      FunctionName: !Ref RegisterUserFunction
+      Principal: "apigateway.amazonaws.com"
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGateway}/*/POST/new
+
+  ApiGatewayDeployment:
+    Type: "AWS::ApiGateway::Deployment"
+    Properties:
+      RestApiId: !Ref ApiGateway
+      StageName: "prod"
+    DependsOn:
+      - NotifyLoginMethod
+      - NotifyUserMethod
+
+  LoginQueueEventSourceMapping:
+    Type: "AWS::Lambda::EventSourceMapping"
+    Properties:
+      BatchSize: 10
+      EventSourceArn: !GetAtt LoginQueue.Arn
+      FunctionName: !Ref ProcessLoginFunction
+
+  UserCreationQueueProcessQueueMapping:
+    Type: "AWS::Lambda::EventSourceMapping"
+    Properties:
+      BatchSize: 10
+      EventSourceArn: !GetAtt UserCreationQueue.Arn
+      FunctionName: !Ref ProcessQueueFunction
+
+Outputs:
+  ApiUrl:
+    Description: "API Gateway endpoint URL for Prod stage"
+    Value: !Sub "https://${ApiGateway}.execute-api.${AWS::Region}.amazonaws.com/prod"

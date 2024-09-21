@@ -1,0 +1,7 @@
+resources:
+  - name: test-pubsub-subscription
+    type: pubsub.v1.subscription
+    properties:
+      subscription: my-subscription
+      topic: projects/csci5410-pro/topics/test-topic
+      ackDeadlineSeconds: 10

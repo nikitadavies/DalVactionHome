@@ -1,0 +1,237 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Resources:
+  UserAuthPool:
+    Type: "AWS::Cognito::UserPool"
+    Properties:
+      UserPoolName: "UserAuthPool"
+      Schema:
+        - Name: "email"
+          AttributeDataType: "String"
+          Required: true
+        - Name: "user_address"
+          AttributeDataType: "String"
+          Mutable: true
+        - Name: "cipher_key"
+          AttributeDataType: "Number"
+          Mutable: true
+        - Name: "city"
+          AttributeDataType: "String"
+          Mutable: true
+        - Name: "contact_no"
+          AttributeDataType: "Number"
+          Mutable: true
+        - Name: "user_name"
+          AttributeDataType: "String"
+          Mutable: true
+        - Name: "pincode"
+          AttributeDataType: "String"
+          Mutable: true
+        - Name: "security_answer"
+          AttributeDataType: "String"
+          Mutable: true
+        - Name: "security_question"
+          AttributeDataType: "String"
+          Mutable: true
+        - Name: "user_group"
+          AttributeDataType: "String"
+          Mutable: true
+        - Name: "user_type"
+          AttributeDataType: "String"
+          Mutable: true
+      AutoVerifiedAttributes:
+        - email
+      UsernameAttributes:
+        - email
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 8
+          RequireUppercase: true
+          RequireLowercase: true
+          RequireNumbers: true
+          RequireSymbols: true
+          TemporaryPasswordValidityDays: 7
+      EmailConfiguration:
+        EmailSendingAccount: "COGNITO_DEFAULT"
+        ReplyToEmailAddress: "no-reply@verificationemail.com"
+      LambdaConfig:
+        PostConfirmation: !GetAtt AssignGroupFunctionNew.Arn
+        PostAuthentication: !GetAtt CustomAuthResponseFunctionNew.Arn
+
+  UserAuthPoolClient:
+    Type: "AWS::Cognito::UserPoolClient"
+    Properties:
+      ClientName: "FE-Web"
+      UserPoolId: !Ref UserAuthPool
+      GenerateSecret: false
+      AllowedOAuthFlows:
+        - "code"
+      AllowedOAuthScopes:
+        - "email"
+        - "openid"
+        - "profile"
+      SupportedIdentityProviders:
+        - "COGNITO"
+      ExplicitAuthFlows:
+        - "ALLOW_ADMIN_USER_PASSWORD_AUTH"
+        - "ALLOW_CUSTOM_AUTH"
+        - "ALLOW_USER_PASSWORD_AUTH"
+        - "ALLOW_REFRESH_TOKEN_AUTH"
+      CallbackURLs:
+        - "https://example.com/callback"
+      LogoutURLs:
+        - "https://example.com/logout"
+
+  PropertyAgentsGroup:
+    Type: "AWS::Cognito::UserPoolGroup"
+    Properties:
+      GroupName: "PropertyAgents"
+      UserPoolId: !Ref UserAuthPool
+      Description: "Users who are property agents with admin access"
+      Precedence: 1
+
+  RegisteredCustomersGroup:
+    Type: "AWS::Cognito::UserPoolGroup"
+    Properties:
+      GroupName: "RegisteredCustomers"
+      UserPoolId: !Ref UserAuthPool
+      Description: "Users who are also registered customers"
+      Precedence: 2
+
+  AssignGroupFunctionNew:
+    Type: "AWS::Lambda::Function"
+    Properties:
+      FunctionName: "AssignGroupNew"
+      Handler: "index.lambda_handler"
+      Role: "arn:aws:iam::401985591036:role/LabRole"
+      Runtime: "python3.12"
+      Code:
+        ZipFile: |
+          import boto3
+
+          dynamodb = boto3.resource('dynamodb')
+          table = dynamodb.Table('UserDetails')
+
+          def lambda_handler(event, context):
+              user_pool_id = 'us-east-1_I1n3jFVog'
+              username = event['userName']
+              user_attributes = event['request']['userAttributes']
+              client = boto3.client('cognito-idp')
+
+              try:
+                  group_name = user_attributes.get('custom:user_group')
+                  if not group_name:
+                      raise ValueError("custom:user_group attribute is missing")
+
+                  client.admin_add_user_to_group(
+                      UserPoolId=user_pool_id,
+                      Username=username,
+                      GroupName=group_name
+                  )
+
+                  table.put_item(
+                      Item={
+                          'UserID': user_attributes['email'],
+                          'email': user_attributes['email'],
+                          'name': user_attributes['custom:user_name'],
+                          'sec_ques': user_attributes['custom:security_question'],
+                          'sec_ans': user_attributes['custom:security_answer'],
+                          'cipher_key': int(user_attributes['custom:cipher_key']),
+                          'address': user_attributes.get('custom:user_address', ''),
+                          'city': user_attributes.get('custom:city', ''),
+                          'pincode': user_attributes.get('custom:pincode', ''),
+                          'contact_no': user_attributes.get('custom:contact_no', ''),
+                          'user_type': user_attributes.get('custom:user_type', '')
+                      }
+                  )
+              except Exception as e:
+                  print(f"Error processing user {username} for group {group_name}: {e}")
+
+              return event
+
+  CustomAuthResponseFunctionNew:
+    Type: "AWS::Lambda::Function"
+    Properties:
+      FunctionName: "CustomAuthresponseNew"
+      Handler: "index.lambda_handler"
+      Role: "arn:aws:iam::401985591036:role/LabRole"
+      Runtime: "python3.12"
+      Code:
+        ZipFile: |
+          import json
+          import boto3
+          from botocore.exceptions import ClientError
+          import time
+          import uuid
+          from datetime import datetime
+
+          def lambda_handler(event, context):
+              user_id = event['userName']
+              user_attributes = event['request']['userAttributes']
+              user_email = user_attributes.get('email', '')
+              user_name = user_attributes.get('custom:name', '')
+              user_type = user_attributes.get('custom:user_type', '')
+
+              log_sign_in_activity(user_id, user_email)
+              print(event)
+              event['response']['claimsOverrideDetails'] = {
+                  'claimsToAddOrOverride': {
+                      'custom:userId': user_id,
+                      'custom:userEmail': user_email,
+                      'custom:userName': user_name,
+                      'custom:userType': user_type
+                  }
+              }
+
+              return event
+
+          def log_sign_in_activity(user_id, user_email):
+              dynamodb = boto3.resource('dynamodb')
+              table = dynamodb.Table('LoginDetails')
+
+              log_id = str(uuid.uuid4())
+              now = datetime.now()
+              date_str = now.strftime("%Y-%m-%d")
+              time_str = now.strftime("%H:%M:%S")
+
+              try:
+                  table.put_item(
+                      Item={
+                          'LogId': log_id,
+                          'UserId': user_id,
+                          'UserEmail': user_email,
+                          'SignInDate': date_str,
+                          'SignInTime': time_str
+                      }
+                  )
+              except ClientError as e:
+                  print(f"Error logging sign-in activity: {e}")
+
+  AssignGroupPermission:
+    Type: "AWS::Lambda::Permission"
+    Properties:
+      FunctionName: !GetAtt AssignGroupFunctionNew.Arn
+      Action: "lambda:InvokeFunction"
+      Principal: "cognito-idp.amazonaws.com"
+      SourceArn: !Sub "arn:aws:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${UserAuthPool}"
+
+  CustomAuthResponsePermission:
+    Type: "AWS::Lambda::Permission"
+    Properties:
+      FunctionName: !GetAtt CustomAuthResponseFunctionNew.Arn
+      Action: "lambda:InvokeFunction"
+      Principal: "cognito-idp.amazonaws.com"
+      SourceArn: !Sub "arn:aws:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${UserAuthPool}"
+
+Outputs:
+  UserPoolId:
+    Description: "User Pool ID"
+    Value: !Ref UserAuthPool
+  UserPoolClientId:
+    Description: "User Pool Client ID"
+    Value: !Ref UserAuthPoolClient
+  AssignGroupFunctionNewArn:
+    Description: "Assign Group New Lambda Function ARN"
+    Value: !GetAtt AssignGroupFunctionNew.Arn
+  CustomAuthResponseFunctionNewArn:
+    Description: "Custom Auth Response New Lambda Function ARN"
+    Value: !GetAtt CustomAuthResponseFunctionNew.Arn

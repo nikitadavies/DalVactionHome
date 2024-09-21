@@ -1,0 +1,61 @@
+resources:
+  - name: checkTicketResolution1
+    type: gcp-types/cloudfunctions-v1:projects.locations.functions
+    properties:
+      parent: projects/csci5410-pro/locations/us-east1
+      function: checkTicketResolution1
+      sourceArchiveUrl: gs://cloudfunctionzipfiles/checkTicketResolution1.zip
+      entryPoint: checkTicketResolution1
+      httpsTrigger: {}  # Use httpsTrigger for HTTP-triggered functions
+      runtime: nodejs20
+
+  - name: fetchQuestionAndAnswer1
+    type: gcp-types/cloudfunctions-v1:projects.locations.functions
+    properties:
+      parent: projects/csci5410-pro/locations/us-east1
+      function: fetchQuestionAndAnswer1
+      sourceArchiveUrl: gs://cloudfunctionzipfiles/fetchQuestionAndAnswer1.zip
+      entryPoint: fetchQuestionAndAnswer1
+      httpsTrigger: {}  # Use httpsTrigger for HTTP-triggered functions
+      runtime: nodejs20
+
+  - name: fetchQuestionForAgent1
+    type: gcp-types/cloudfunctions-v1:projects.locations.functions
+    properties:
+      parent: projects/csci5410-pro/locations/us-east1
+      function: fetchQuestionForAgent1
+      sourceArchiveUrl: gs://cloudfunctionzipfiles/fetchQuestionForAgent1.zip
+      entryPoint: fetchQuestionForAgent1
+      httpsTrigger: {}  # Use httpsTrigger for HTTP-triggered functions
+      runtime: nodejs20
+
+  - name: processQuestion1
+    type: gcp-types/cloudfunctions-v1:projects.locations.functions
+    properties:
+      parent: projects/csci5410-pro/locations/us-east1
+      function: processQuestion1
+      sourceArchiveUrl: gs://cloudfunctionzipfiles/processQuestion1.zip
+      entryPoint: processQuestion1
+      httpsTrigger: {}  # Use httpsTrigger for HTTP-triggered functions
+      runtime: nodejs20
+
+  - name: publishQuestion1
+    type: gcp-types/cloudfunctions-v1:projects.locations.functions
+    properties:
+      parent: projects/csci5410-pro/locations/us-east1
+      function: publishQuestion1
+      sourceArchiveUrl: gs://cloudfunctionzipfiles/publishQuestion1.zip
+      entryPoint: publishQuestion1
+      httpsTrigger: {}  # Use httpsTrigger for HTTP-triggered functions
+      runtime: nodejs20
+
+  - name: updateAnswerForQuestion1
+    type: gcp-types/cloudfunctions-v1:projects.locations.functions
+    properties:
+      parent: projects/csci5410-pro/locations/us-east1
+      function: updateAnswerForQuestion1
+      sourceArchiveUrl: gs://cloudfunctionzipfiles/updateAnswerForQuestion1.zip
+      entryPoint: updateAnswerForQuestion1
+      httpsTrigger: {}  # Use httpsTrigger for HTTP-triggered functions
+      runtime: nodejs20
+      

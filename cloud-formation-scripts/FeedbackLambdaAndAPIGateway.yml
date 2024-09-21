@@ -1,0 +1,96 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: AWS CloudFormation for creating Lambda functions and API Gateway
+
+Resources:
+  AddFeedbackLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.handler
+      Role: arn:aws:iam::401985591036:role/LabRole
+      Runtime: nodejs20.x
+      Code:
+        S3Bucket: dalvacationhome-lambda
+        S3Key: add-feedback.zip
+
+  GetFeedbacksLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.handler
+      Role: arn:aws:iam::401985591036:role/LabRole
+      Runtime: nodejs20.x
+      Code:
+        S3Bucket: dalvacationhome-lambda
+        S3Key: get-feedbacks.zip
+
+  GetFeedbackPolarityLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.handler
+      Role: arn:aws:iam::401985591036:role/LabRole
+      Runtime: nodejs20.x
+      Code:
+        S3Bucket: dalvacationhome-lambda
+        S3Key: get-polarity.zip
+
+  DalVacationHomeApi:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: DalVacationHome
+
+  AddFeedbackResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      ParentId: !GetAtt DalVacationHomeApi.RootResourceId
+      PathPart: feedback
+      RestApiId: !Ref DalVacationHomeApi
+
+  AddFeedbackMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref DalVacationHomeApi
+      ResourceId: !Ref AddFeedbackResource
+      HttpMethod: POST
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AddFeedbackLambdaFunction.Arn}/invocations
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+      MethodResponses:
+        - StatusCode: 200
+          ResponseModels:
+            application/json: Empty
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+
+  GetFeedbackResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      ParentId: !GetAtt DalVacationHomeApi.RootResourceId
+      PathPart: feedback
+      RestApiId: !Ref DalVacationHomeApi
+
+  GetFeedbackMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref DalVacationHomeApi
+      ResourceId: !Ref GetFeedbackResourc
+      HttpMethod: GET
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GetFeedbacksLambdaFunction.Arn}/invocations
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+      MethodResponses:
+        - StatusCode: 200
+          ResponseModels:
+            application/json: Empty
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true          

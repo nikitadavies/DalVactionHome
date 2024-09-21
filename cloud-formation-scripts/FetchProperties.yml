@@ -1,0 +1,86 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: AWS CloudFormation for creating Lambda functions and API Gateway
+
+Resources:
+  FetchPropertyLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.handler
+      Role: arn:aws:iam::401985591036:role/LabRole
+      Runtime: nodejs20.x
+      Code:
+        S3Bucket: dalvacationhome-lambda
+        S3Key: fetch-properties.zip
+  
+  FetchPropertyDetailsLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.handler
+      Role: arn:aws:iam::401985591036:role/LabRole
+      Runtime: nodejs20.x
+      Code:
+        S3Bucket: dalvacationhome-lambda
+        S3Key: fetch-properties-detail.zip
+
+  DalVacationHomeApi:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: DalVacationHome
+
+  FetchPropertyResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      ParentId: !GetAtt DalVacationHomeApi.RootResourceId
+      PathPart: fetch-properties
+      RestApiId: !Ref DalVacationHomeApi
+
+  FetchPropertyMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref DalVacationHomeApi
+      ResourceId: !Ref FetchPropertyResource
+      HttpMethod: POST
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${FetchPropertyLambdaFunction.Arn}/invocations
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+      MethodResponses:
+        - StatusCode: 200
+          ResponseModels:
+            application/json: Empty
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+
+  PropertyDetailResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      ParentId: !GetAtt DalVacationHomeApi.RootResourceId
+      PathPart: fetch-details
+      RestApiId: !Ref DalVacationHomeApi
+
+  FetchPropertyDetailsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref DalVacationHomeApi
+      ResourceId: !Ref PropertyDetailResource
+      HttpMethod: POST
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${FetchPropertyDetailsLambdaFunction.Arn}/invocations
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+      MethodResponses:
+        - StatusCode: 200
+          ResponseModels:
+            application/json: Empty
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true          

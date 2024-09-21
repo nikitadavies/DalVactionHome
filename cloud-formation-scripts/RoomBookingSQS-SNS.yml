@@ -1,0 +1,88 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: AWS CloudFormation template to create a User Management API with SNS, SQS, and Lambda integrations.
+ 
+Resources:
+  RoomBookingFunction:
+    Type: "AWS::Lambda::Function"
+    Properties:
+      FunctionName: RoomBookingFunction
+      Handler: index.handler
+      Role: arn:aws:iam::401985591036:role/LabRole
+      Runtime: nodejs20.x
+      Code:
+        S3Bucket: dalvacationhome-lambda
+        S3Key: booking.zip
+ 
+  RoomApprovalFunction:
+    Type: "AWS::Lambda::Function"
+    Properties:
+      FunctionName: RoomApprovalFunction
+      Handler: index.handler
+      Role: arn:aws:iam::401985591036:role/LabRole
+      Runtime: nodejs20.x
+      Code:
+        S3Bucket: dalvacationhome-lambda
+        S3Key: approval.zip
+ 
+  RoomBookingRequestTopic:
+    Type: "AWS::SNS::Topic"
+    Properties:
+      TopicName: RoomBookingTopic
+ 
+  RoomBookingRequestQueue:
+    Type: "AWS::SQS::Queue"
+    Properties:
+      QueueName: RoomBooking
+ 
+  RoomBookingRequestQueueSubscription:
+    Type: "AWS::SNS::Subscription"
+    Properties:
+      Endpoint: !GetAtt RoomBookingRequestQueue.Arn
+      Protocol: sqs
+      TopicArn: !Ref RoomBookingRequestTopic
+ 
+  ApiGateway:
+    Type: "AWS::ApiGateway::RestApi"
+    Properties:
+      Name: DalVacationHomeApi
+ 
+  NotifyUser:
+    Type: "AWS::ApiGateway::Resource"
+    Properties:
+      ParentId: !GetAtt ApiGateway.RootResourceId
+      PathPart: new
+      RestApiId: !Ref ApiGateway
+ 
+  NotifyBookingMethod:
+    Type: "AWS::ApiGateway::Method"
+    Properties:
+      AuthorizationType: NONE
+      HttpMethod: POST
+      ResourceId: !Ref NotifyUser
+      RestApiId: !Ref ApiGateway
+      Integration:
+        Type: AWS
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${RoomBookingFunction.Arn}/invocations
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+              method.response.header.Access-Control-Allow-Methods: "'POST,OPTIONS'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Origin: true
+
+ 
+  RoomBookingQueueEventSourceMapping:
+    Type: "AWS::Lambda::EventSourceMapping"
+    Properties:
+      BatchSize: 10
+      EventSourceArn: !GetAtt RoomBookingRequestQueue.Arn
+      FunctionName: !Ref RoomApprovalFunction
+ 
+ 

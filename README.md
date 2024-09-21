@@ -1,2 +1,4 @@
 # DalVactionHome
 A Serverless MultiCloud VacationHome Application (AWS and GCP)               
+
+Developed a multi-cloud vacation Home application that integrates AWS and GCP to manage bookings, authentication and authorization customer support and data analysis. Used AWS Cognito and Lambda for Authentication and Authorization, AWS Lex for advanced chatbot capabilities, GCP Pub/sub, Cloud Functions and Firestore for real time chat functionalities, AWS SQS and SNS for managing user notifications, Looker Studio and Google Natural Language API for data visualization and analysis. Used CloudFormation and GCP Cloud Deployment Manager (IaC) for automating infrastructure setup. The lambda and cloud functions were developed in Python.
